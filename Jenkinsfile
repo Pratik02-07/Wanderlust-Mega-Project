@@ -1,4 +1,4 @@
-@Library('Shared') _
+@Library('Shared-lib') _
 pipeline {
     agent {label 'Node'}
     
@@ -32,7 +32,7 @@ pipeline {
         stage('Git: Code Checkout') {
             steps {
                 script{
-                    code_checkout("https://github.com/LondheShubham153/Wanderlust-Mega-Project.git","main")
+                    code_checkout("https://github.com/Pratik02-07/Wanderlust-Mega-Project.git","main")
                 }
             }
         }
