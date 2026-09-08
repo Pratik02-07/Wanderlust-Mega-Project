@@ -1,0 +1,9 @@
+# Terraform local state and history
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Sensitive SSH Keys
+terraform/terra-key
+terraform/terra-key.pub

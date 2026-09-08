@@ -78,20 +78,8 @@ sudo usermod -aG docker ubuntu && newgrp docker
 ```
 #
 - <b id="Jenkins">Install and configure Jenkins (Master machine)</b>
-```bash
-sudo apt update -y
-sudo apt install fontconfig openjdk-17-jre -y
+https://www.jenkins.io/doc/book/installing/linux/
 
-sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
-  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
-  
-echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
-  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
-  /etc/apt/sources.list.d/jenkins.list > /dev/null
-  
-sudo apt-get update -y
-sudo apt-get install jenkins -y
-```
 - <b>Now, access Jenkins Master on the browser on port 8080 and configure it</b>.
 #
 - <b id="EKS">Create EKS Cluster on AWS (Master machine)</b>
@@ -122,24 +110,25 @@ sudo apt-get install jenkins -y
   
   - <b>Create EKS Cluster (Master machine)</b>
   ```bash
-  eksctl create cluster --name=wanderlust \
-                      --region=us-east-2 \
-                      --version=1.30 \
-                      --without-nodegroup
+eksctl create cluster --name=wanderlust \
+                    --region=us-east-1 \
+                    --version=1.34 \
+                    --without-nodegroup
+
   ```
   - <b>Associate IAM OIDC Provider (Master machine)</b>
   ```bash
   eksctl utils associate-iam-oidc-provider \
-    --region us-east-2 \
+    --region us-east-1 \
     --cluster wanderlust \
     --approve
   ```
   - <b>Create Nodegroup (Master machine)</b>
   ```bash
   eksctl create nodegroup --cluster=wanderlust \
-                       --region=us-east-2 \
+                       --region=us-east-1 \
                        --name=wanderlust \
-                       --node-type=t2.large \
+                       --node-type=m7i-flex.large \
                        --nodes=2 \
                        --nodes-min=2 \
                        --nodes-max=2 \
@@ -215,6 +204,33 @@ wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-k
 echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
 sudo apt-get update -y
 sudo apt-get install trivy -y
+
+The sudo: 'apt-key': command not found and NO_PUBKEY 35B8ACA44FD9CA9F errors happen because apt-key is completely deprecated and removed in newer Ubuntu releases (like your version). Because the signature verification failed, apt refused to sync the repository metadata, resulting in To fix this, you need to download the public key securely to the modern /etc/apt/keyrings/ path and point your repository file directly to it.
+Run these commands step-by-step to install Trivy:
+## 1. Create the secure keyrings directory
+Ensure the modern repository key directory exists on your system:
+
+sudo mkdir -p /etc/apt/keyrings
+
+## 2. Download and add the key to the new keyring location
+Download the Aqua Security GPG key, de-armor it, and save it directly inside the keyrings folder:
+
+wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /etc/apt/keyrings/trivy.gpg > /dev/null
+
+## 3. Update your Trivy sources list format
+Overwrite your existing template to explicitly tell apt where to look for the public key signature (signed-by parameter):
+
+echo "deb [signed-by=/etc/apt/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+
+## 4. Run the update and install Trivy
+Now that apt knows how to verify the repository signature securely, update your lists and install the package:
+
+sudo apt-get update
+sudo apt-get install trivy -y
+
+Once the installation finishes, you can verify it works by running trivy --version. Let me know if the repository updates successfully without the GPG key error this time!
+
+
 ```
 #
 - <b id="Argo">Install and Configure ArgoCD (Master Machine)</b>
